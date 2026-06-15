@@ -191,6 +191,7 @@ def parse_cell_array(output_str, section_header):
         polynomials.append(current_poly)
     return polynomials
 
+@st.cache_data
 def octave_minimos_quadrados(f_str, a, b, n, w_str):
     _, f_vec = parse_and_vectorize_for_octave(f_str)
     _, w_vec = parse_and_vectorize_for_octave(w_str)
@@ -213,6 +214,7 @@ def octave_minimos_quadrados(f_str, a, b, n, w_str):
     poly_expr = sum(coefs[k] * (x**k) for k in range(len(coefs)))
     return coefs, sp.expand(poly_expr), mat_A, vec_B
 
+@st.cache_data
 def octave_gram_schmidt(f_str, a, b, n, w_str):
     _, f_vec = parse_and_vectorize_for_octave(f_str)
     _, w_vec = parse_and_vectorize_for_octave(w_str)
@@ -241,6 +243,7 @@ def octave_gram_schmidt(f_str, a, b, n, w_str):
         phi_exprs.append(sum(coef * (x**(len(p_vec) - 1 - i)) for i, coef in enumerate(p_vec)))
     return p_coef, sp.expand(poly_expr), phi_exprs, alpha
 
+@st.cache_data
 def octave_gram_schmidt_simpson(f_str, a, b, n, w_str, m):
     _, f_vec = parse_and_vectorize_for_octave(f_str)
     _, w_vec = parse_and_vectorize_for_octave(w_str)
