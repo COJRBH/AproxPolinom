@@ -9,9 +9,6 @@ function [p_coef, phi, alpha] = gram_schmidt_simpson(f, a, b, n, w, m)
         m = 1000;
     end
 
-    % Define um wrapper local para integração usando Simpson Composto
-    integra = @(g) simpson_composto(g, a, b, m);
-
     % Inicialização da célula de polinômios (vetores de coeficientes, grau decrescente)
     phi = cell(1, n + 1);
     phi{1} = [1]; % phi_0(x) = 1
@@ -21,8 +18,8 @@ function [p_coef, phi, alpha] = gram_schmidt_simpson(f, a, b, n, w, m)
 
     if n >= 1
         % Cálculo de B1
-        num_B1 = integra(@(x) x .* w(x) .* polyval(phi{1}, x).^2);
-        den_B1 = integra(@(x) w(x) .* polyval(phi{1}, x).^2);
+        num_B1 = simpson_composto(@(x) x .* w(x) .* polyval(phi{1}, x).^2, a, b, m);
+        den_B1 = simpson_composto(@(x) w(x) .* polyval(phi{1}, x).^2, a, b, m);
         B(1) = num_B1 / den_B1;
 
         % Construção de phi_1(x) = (x - B1) * phi_0(x) -> Vetor [1, -B1]
@@ -31,13 +28,13 @@ function [p_coef, phi, alpha] = gram_schmidt_simpson(f, a, b, n, w, m)
 
     % Processo de recorrência para graus superiores (k >= 2)
     for k = 2:n
-        % phi{k} representa phi_{k-1}
-        num_Bk = integra(@(x) x .* w(x) .* polyval(phi{k}, x).^2);
-        den_Bk = integra(@(x) w(x) .* polyval(phi{k}, x).^2);
+        % phi{k} represents phi_{k-1}
+        num_Bk = simpson_composto(@(x) x .* w(x) .* polyval(phi{k}, x).^2, a, b, m);
+        den_Bk = simpson_composto(@(x) w(x) .* polyval(phi{k}, x).^2, a, b, m);
         B(k) = num_Bk / den_Bk;
 
-        num_Ck = integra(@(x) x .* w(x) .* polyval(phi{k}, x) .* polyval(phi{k-1}, x));
-        den_Ck = integra(@(x) w(x) .* polyval(phi{k-1}, x).^2);
+        num_Ck = simpson_composto(@(x) x .* w(x) .* polyval(phi{k}, x) .* polyval(phi{k-1}, x), a, b, m);
+        den_Ck = simpson_composto(@(x) w(x) .* polyval(phi{k-1}, x).^2, a, b, m);
         C(k) = num_Ck / den_Ck;
 
         % Operação polinomial: (x - Bk)*phi_{k-1}(x) - Ck*phi_{k-2}(x)
@@ -57,8 +54,8 @@ function [p_coef, phi, alpha] = gram_schmidt_simpson(f, a, b, n, w, m)
     alpha = zeros(1, n + 1);
 
     for k = 0:n
-        num_alpha = integra(@(x) w(x) .* f(x) .* polyval(phi{k+1}, x));
-        den_alpha = integra(@(x) w(x) .* polyval(phi{k+1}, x).^2);
+        num_alpha = simpson_composto(@(x) w(x) .* f(x) .* polyval(phi{k+1}, x), a, b, m);
+        den_alpha = simpson_composto(@(x) w(x) .* polyval(phi{k+1}, x).^2, a, b, m);
         alpha(k+1) = num_alpha / den_alpha;
 
         % Acumulação do termo no polinômio final p_n(x)
@@ -70,14 +67,29 @@ function [p_coef, phi, alpha] = gram_schmidt_simpson(f, a, b, n, w, m)
     end
 end
 
-function I = simpson_composto(g, a, b, m)
-    if mod(m, 2) ~= 0
-        m = m + 1;
+function I = simpson_composto(g, a, b, N)
+    % Validação de N (deve ser par para Simpson)
+    if mod(N, 2) ~= 0
+        N = N + 1;
     end
-    h = (b - a) / m;
-    x = linspace(a, b, m + 1);
-    y = g(x);
-    I = (h / 3) * (y(1) + 4 * sum(y(2:2:m)) + 2 * sum(y(3:2:m-1)) + y(m+1));
+
+    h = (b - a) / N;
+    
+    XI0 = g(a) + g(b);
+    XI1 = 0; % Soma de g(x_i) para i ímpar
+    XI2 = 0; % Soma de g(x_i) para i par
+
+    for i = 1:(N-1)
+        x_i = a + i * h;
+        g_xi = g(x_i);
+        if mod(i, 2) == 0
+            XI2 = XI2 + g_xi;
+        else
+            XI1 = XI1 + g_xi;
+        end
+    end
+
+    I = (h / 3) * (XI0 + 2 * XI2 + 4 * XI1);
 end
 
 function exibir_polinomio(coefs, ordem)
